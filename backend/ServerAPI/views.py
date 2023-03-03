@@ -1,9 +1,18 @@
 import numpy as np
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.generics import ListAPIView
 from .models import *
-from .utils import find_anomally, swans_visualization
-import requests
+from .utils import find_anomally, SwansVisualization
+from .serialisers import *
+
+class SwanListView(ListAPIView):
+    queryset = Swan.objects.all()
+    serializer_class = SwanSerializer
+
+class DetectorListView(ListAPIView):
+    queryset = Detector.objects.all()
+    serializer_class = DetectorSerializer
 
 class AddNewDataView(APIView):
     def post(self, request):
@@ -30,5 +39,24 @@ class AddNewDataView(APIView):
             obj.x, obj.y, obj.int0 = find_anomally(*local_data[0], *local_data[1], *local_data[2])
             obj.save()
             
-        swans_visualization(Swan.objects.all())
         return Response({'post' : 'ok'})
+
+class GetMapUrlView(APIView):
+    def post(self, request):
+
+        ans, code = SwansVisualization(
+            Swan.objects.all(),
+            Detector.objects.all(),
+            request.data.get('start', None),
+            request.data.get('goal', None)
+        ).run()
+
+
+        return Response({'url' : 'http://localhost:8000/media/map_with_swans.png', 'ans': ans, 'code': code})
+
+class DeleteAllDataView(APIView):
+    def get(self, request):
+        Swan.objects.all().delete()
+        Detector.objects.all().delete()
+        return Response({'post': 'ok'})
+
